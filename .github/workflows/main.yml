@@ -16,4 +16,4 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t tasksphere-react .
+          docker build -t tasksphere-react -f reactapp/Dockerfile reactapp/
