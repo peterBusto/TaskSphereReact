@@ -82,11 +82,11 @@ export const authAPI = {
 const handleResponse = async (response) => {
   const data = await response.json();
   if (!response.ok) {
-    throw {
+    throw new Error(JSON.stringify({
       response: { data },
       status: response.status,
       code: response.status === 400 ? 'ERR_BAD_REQUEST' : 'ERR_NETWORK'
-    };
+    }));
   }
   return { data, status: response.status };
 };
