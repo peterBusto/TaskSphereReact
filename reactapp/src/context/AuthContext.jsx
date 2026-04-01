@@ -23,6 +23,13 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    
+    // Add a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(timeout);
   }, []);
 
   const fetchCurrentUser = async () => {
@@ -32,6 +39,14 @@ export const AuthProvider = ({ children }) => {
       setError(null);
     } catch (err) {
       console.error('Failed to fetch current user:', err);
+      // Handle the Error object thrown from API
+      let errorData = {};
+      try {
+        errorData = JSON.parse(err.message);
+      } catch (parseErr) {
+        // If parsing fails, use the error message directly
+        console.error('Could not parse error message:', err.message);
+      }
       localStorage.removeItem('token');
       setError('Session expired. Please login again.');
     } finally {
@@ -56,22 +71,24 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (err) {
       console.error('Login error details:', err);
-      console.error('Error response:', err.response);
-      console.error('Error data:', err.response?.data);
-      console.error('Error status:', err.response?.status);
-      console.error('Error headers:', err.response?.headers);
       
-      // Log the exact error response for debugging
-      if (err.response?.data) {
-        console.error('Django API error response:', JSON.stringify(err.response.data, null, 2));
+      // Parse the Error object thrown from API
+      let errorData = {};
+      try {
+        errorData = JSON.parse(err.message);
+      } catch (parseErr) {
+        console.error('Could not parse error message:', err.message);
+        errorData = { message: err.message };
       }
       
+      console.error('Parsed error data:', errorData);
+      
       // Check if it's a network error (API not available)
-      if (err.code === 'ERR_NETWORK' || 
-          err.code === 'ERR_FAILED' ||
+      if (errorData.code === 'ERR_NETWORK' || 
+          errorData.code === 'ERR_FAILED' ||
           err.message?.includes('Network Error') ||
           err.message?.includes('ERR_FAILED') ||
-          !err.response) {
+          !errorData.response) {
         console.log('API not available, using demo mode for login');
         
         // Create demo user for testing
@@ -93,17 +110,17 @@ export const AuthProvider = ({ children }) => {
       // Extract more detailed error information
       let errorMessage = 'Login failed. Please try again.';
       
-      if (err.response?.data) {
+      if (errorData.response?.data) {
         // Handle different types of error responses
-        if (typeof err.response.data === 'string') {
-          errorMessage = err.response.data;
-        } else if (err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.data.error) {
-          errorMessage = err.response.data.error;
-        } else if (err.response.data.errors) {
+        if (typeof errorData.response.data === 'string') {
+          errorMessage = errorData.response.data;
+        } else if (errorData.response.data.message) {
+          errorMessage = errorData.response.data.message;
+        } else if (errorData.response.data.error) {
+          errorMessage = errorData.response.data.error;
+        } else if (errorData.response.data.errors) {
           // Handle validation errors
-          const errors = err.response.data.errors;
+          const errors = errorData.response.data.errors;
           if (Array.isArray(errors)) {
             errorMessage = errors.join(', ');
           } else if (typeof errors === 'object') {
